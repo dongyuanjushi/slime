@@ -253,6 +253,37 @@ class Dataset:
 
     def __len__(self):
         return len(self.samples)
+    
+    
+class CUADataset:
+    def __init__(
+        self,
+        path,
+        seed=42,
+    ):
+        self.origin_samples = []
+        for data in read_file(path):
+            self.origin_samples.append(Sample(prompt="", metadata=data))
+
+        self.epoch_id = -1
+        self.seed = seed
+        self.samples = self.origin_samples
+
+    def shuffle(self, new_epoch_id):
+        if self.epoch_id == new_epoch_id:
+            return
+
+        random.seed(self.seed + new_epoch_id)
+        permutation = list(range(len(self.samples)))
+        random.shuffle(permutation)
+        self.samples = [self.origin_samples[i] for i in permutation]
+        self.epoch_id = new_epoch_id
+
+    def __getitem__(self, idx):
+        return self.samples[idx]
+
+    def __len__(self):
+        return len(self.samples)
 
 
 def get_minimum_num_micro_batch_size(total_lengths, max_tokens_per_gpu):

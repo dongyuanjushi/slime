@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-from slime.utils.data import Dataset
+from slime.utils.data import Dataset, CUADataset
 from slime.utils.misc import load_function
 from slime.utils.processing_utils import load_processor, load_tokenizer
 from slime.utils.types import Sample
@@ -62,19 +62,23 @@ class RolloutDataSource(DataSource):
                 if processor:
                     processor.save_pretrained(Path(d) / "processor")
 
-            self.dataset = Dataset(
-                args.prompt_data,
-                tokenizer=tokenizer,
-                processor=processor,
-                max_length=args.rollout_max_prompt_len,
-                prompt_key=args.input_key,
-                multimodal_keys=args.multimodal_keys,
-                label_key=args.label_key,
-                metadata_key=args.metadata_key,
-                tool_key=args.tool_key,
-                apply_chat_template=args.apply_chat_template,
-                apply_chat_template_kwargs=args.apply_chat_template_kwargs,
-                seed=args.rollout_seed,
+            # self.dataset = Dataset(
+            #     args.prompt_data,
+            #     tokenizer=tokenizer,
+            #     processor=processor,
+            #     max_length=args.rollout_max_prompt_len,
+            #     prompt_key=args.input_key,
+            #     multimodal_keys=args.multimodal_keys,
+            #     label_key=args.label_key,
+            #     metadata_key=args.metadata_key,
+            #     tool_key=args.tool_key,
+            #     apply_chat_template=args.apply_chat_template,
+            #     apply_chat_template_kwargs=args.apply_chat_template_kwargs,
+            #     seed=args.rollout_seed,
+            # )
+            self.dataset = CUADataset(
+                path=args.prompt_data,
+                seed=args.rollout_seed
             )
             if self.args.rollout_shuffle:
                 self.dataset.shuffle(self.epoch_id)
