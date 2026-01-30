@@ -10,10 +10,7 @@ try:
     import orjson  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     orjson = None
-from examples.cua_vlm_multi_turn.base_env import BaseInteractionEnv
 
-from slime.rollout.rm_hub import grade_answer_verl
-from slime.rollout.rm_hub.math_utils import extract_answer as extract_boxed_answer
 from slime.utils.types import Sample
 
 import requests
@@ -26,20 +23,20 @@ TOOL_CALL_RE = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.DOTALL)
 # Accept either name; verl uses `calc_geo3k_reward` while the instruction refers to `calc_score`.
 SUPPORTED_TOOL_NAMES = {"calc_score", "calc_geo3k_reward"}
 
+import random
 
-class CUAEnv(BaseInteractionEnv):
+class CUAEnv:
     """
-    Minimal interaction environment for multi-turn geo3k with a scoring tool.
+    Minimal interaction environment for multi-turn CUA with a scoring tool.
 
     The model is expected to emit a <tool_call>{...}</tool_call> payload that includes
-    an `answer` argument. We run the math reward checker against the ground truth and
-    return the score as the next observation. The episode ends immediately after each
-    step; responses are provided but no further turns are taken.
+    an `action` argument. We execute the action and return the result as the next observation.
     """
 
-    def __init__(self, os_env_ip: str, os_available_ports: list[int]):
+    def __init__(self, os_env_ip: str, os_env_available_ports: list[int]):
         self.os_env_ip = os_env_ip
-        self.os_available_ports = os_available_ports
+        self.os_env_available_ports = os_env_available_ports
+        self.os_env_port = random.choice(os_env_available_ports)
         # self.os_env_port = os_available_ports[0] if os_available_ports else 20000
 
     def reset(self, task_config: dict) -> dict:
@@ -85,5 +82,5 @@ class CUAEnv(BaseInteractionEnv):
 
 def build_env(sample: Sample | None = None, args: Any | None = None, **_: Any) -> CUAEnv:
     os_env_ip = os.getenv("OS_ENV_IP", "127.0.0.1")
-    os_available_ports = [int(port) for port in os.getenv("OS_AVAILABLE_PORTS", "20000").split(",")]
-    return CUAEnv(os_env_ip=os_env_ip, os_available_ports=os_available_ports)
+    os_env_available_ports = [int(port) for port in os.getenv("OS_ENV_AVAILABLE_PORTS", "20000").split(",")]
+    return CUAEnv(os_env_ip=os_env_ip, os_env_available_ports=os_env_available_ports)

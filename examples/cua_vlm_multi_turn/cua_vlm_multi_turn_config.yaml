@@ -1,2 +1,2 @@
 max_turns: 50
-rollout_interaction_env_path: examples.cua_vlm_multi_turn.env_cua
+rollout_interaction_env_path: examples.cua_vlm_multi_turn.cua_env

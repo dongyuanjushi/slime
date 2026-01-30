@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from examples.cua_vlm_multi_turn.base_env import BaseInteractionEnv
 
-from examples.cua_vlm_multi_turn.prompt import SYSTEM_PROMPT_QWEN_3_PLANNING
+from examples.cua_vlm_multi_turn.prompt import SYSTEM_PROMPT_QWEN_3
 import re
 import json
 from typing import Any, Optional, Tuple, Dict, List
@@ -24,7 +23,7 @@ from slime.utils.http_utils import post
 from slime.utils.processing_utils import encode_image_for_rollout_engine
 from slime.utils.types import Sample
 
-DEFAULT_ENV_MODULE = "examples.vlm_multi_turn.env_cua"
+DEFAULT_ENV_MODULE = "examples.cua_vlm_multi_turn.cua_env"
 
 # Dummy messages used for calculating trim length in chat template encoding
 DUMMY_MESSAGES = [
@@ -362,7 +361,7 @@ async def _run_inference_step(url: str, tokens: list[int], sampling_params: dict
     return response_text, new_tokens, new_log_probs, finish_type
 
 
-def _process_env_step(env: BaseInteractionEnv, response_text: str, tokenizer, processor, args, sample_metadata):
+def _process_env_step(env: CUAEnv, response_text: str, tokenizer, processor, args, sample_metadata):
     observation, done, _ = env.step(response_text)
     if done:
         return None, None, None, None, True
@@ -498,9 +497,12 @@ async def generate(args: Any, sample: Sample, sampling_params) -> Sample:
     env, env_module, config, state, url = _initialize_resources(args, sample)
     sampling_params = sampling_params.copy()
     try:
-        task_config = sample.metadata.get("config", {})
+        print(f"Sample: {sample}")
+        task_config = sample.metadata
+        print(f"Task config: {task_config}")
+        
         initial_response = env.reset(task_config)
-        system_prompt = SYSTEM_PROMPT_QWEN_3_PLANNING
+        system_prompt = SYSTEM_PROMPT_QWEN_3
         instruction = sample.metadata.get("instruction", "")
         initial_screenshot = initial_response.get("screenshot")
         vm_id = initial_response.get("vm_id")
@@ -531,17 +533,28 @@ async def generate(args: Any, sample: Sample, sampling_params) -> Sample:
                 screenshot_history=screenshot_history
             )
             
-            sample.tokens = state.tokenizer.apply_chat_template(current_messages, tokenize=True)
+            print(f"Current messages: {current_messages}")
+            
+            sample.tokens = state.processor.apply_chat_template(
+                current_messages, tokenize=True, add_generation_prompt=True
+            )
+            
+            print(f"Sample tokens: {sample.tokens}")
 
             response_text, new_response_tokens, new_response_log_probs, finish_type = await _run_inference_step(
                 url, sample.tokens, cur_sampling_params, current_images, state.tokenizer
             )
             
             action_description, tool_call = parse_action_and_pyautogui_code(response_text)
-            action_code = process_tool_call(tool_call)
-            step_response = env.step(action_code, vm_id)
             
-            action_history.append(action_description)
+            print(f"Tool call: {tool_call}")
+            
+            action_code = process_tool_call(tool_call)
+            
+            print(f"Action code: {action_code}")
+            
+            step_response = env.step(action_code, vm_id)
+            action_history.append(response_text)
             
             # _append_to_sample(sample, response_tokens, new_response_tokens, new_response_log_probs, loss_mask_val=1)
             # budget = _update_budget(budget, len(new_response_tokens))
@@ -553,6 +566,8 @@ async def generate(args: Any, sample: Sample, sampling_params) -> Sample:
                 sample.status = Sample.Status.COMPLETED
                 sample.reward = reward
                 break
+            
+            screenshot_history.append(step_response.get("screenshot"))
 
             # obs_log_probs = [0.0] * len(obs_prompt_ids)
             # _append_to_sample(sample, response_tokens, obs_prompt_ids, obs_log_probs, loss_mask_val=0)

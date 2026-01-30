@@ -60,11 +60,11 @@ def execute():
         "--custom-config-path examples/cua_vlm_multi_turn/cua_vlm_multi_turn_config.yaml "
         "--rollout-shuffle "
         "--num-rollout 3000 "
-        "--rollout-batch-size 64 "
-        "--n-samples-per-prompt 8 "
+        "--rollout-batch-size 1 "
+        "--n-samples-per-prompt 1 "
         "--rollout-max-response-len 4096 "
         "--rollout-temperature 1 "
-        "--global-batch-size 512 "
+        "--global-batch-size 4 "
     )
 
     grpo_args = (
@@ -90,13 +90,13 @@ def execute():
         "--rollout-num-gpus-per-engine 1 "
         "--sglang-mem-fraction-static 0.6 "
         f"--sglang-cuda-graph-bs {' '.join(map(str, [1, 2, 4, 8] + list(range(16, 257, 8))))} "
+        "--sglang-attention-backend triton"
     )
 
     fsdp_args = (
         "--train-backend fsdp "
         "--gradient-checkpointing "
-        "--sglang-attention-backend fa3 "
-        "--attn-implementation flash_attention_3 "
+        "--sglang-attention-backend triton "
         "--update-weight-buffer-size 536870912 "
     )
 
