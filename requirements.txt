@@ -15,3 +15,7 @@ sglang-router>=0.2.3
 tensorboard
 transformers
 wandb
+sglang==0.5.5.post3
+python-dotenv
+flash-attn
+json5
